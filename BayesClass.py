@@ -82,6 +82,11 @@ class Naive_Bayes:
             self.PTb.append(self.data[int(event.ydata),int(event.xdata)])
             print(self.data[int(event.ydata),int(event.xdata),:])
             
+
+    
+
+    
+
     def separate(self):
         img0= mpimg.imread('/Users/huangyh/Documents/PythonLearning/Model/byq.jpg')
         data0=np.array(img0)
