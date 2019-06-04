@@ -14,16 +14,16 @@ class Bayes_identify:
       #打开文件
       def __init__(self):
             #基本数据准备
-            filename='/Users/huangyh/Documents/PythonLearning/Model/No_3/Varies_of_Houses/多种屋顶.tif'
+            filename='/Users/huangyh/Documents/PythonLearning/Model/No_3/Exposed_soil_Houses/Exposed_soilHouses.tif'
             self.dataset = gdal.Open(filename)#文件打开
             self.PT=[]#样本存储矩阵
-            self.Average=np.array([])#均值矩阵
-            self.Verience=np.array([])#协方差矩阵
+            self.Average=[]#均值矩阵
+            self.Variance=[]#协方差矩阵
             self.fig=plt.figure('RGBImage')#窗体名称
             self.n=0#总样本点个数
             self.each_P=[]#每类点个数
             self.num_of_POI=0#总样本点个数
-
+            self.showimg=np.array([])
             #临时变量准备
             self.PTb=[]#每类样本点临时数组
             self.teach_KP=0#每类的样本点个数
@@ -52,9 +52,10 @@ class Bayes_identify:
             
             self.im_BIPArray=self.im_BIPArray/np.max(self.im_BIPArray)#归一化
 
-            self.im_BIPArray=self.im_BIPArray.reshape(self.im_height,self.im_width,4)#调整图像尺寸
+            self.im_BIPArray=self.im_BIPArray.reshape(self.im_height,self.im_width,self.im_bands)#调整图像尺寸
 
             self.cid=self.fig.canvas.mpl_connect('button_press_event', self.on_press)
+
             plt.imshow(self.im_BIPArray[:,:,0:3])#将图像添加到窗口
             plt.show()#图像显示
 
@@ -62,7 +63,7 @@ class Bayes_identify:
       def on_press(self,event):
 
             if event.button==1: #鼠标左键点击选择样本
-                  self.PTb.append(self.im_BIPArray[int(event.ydata),int(event.xdata),:])#将点 
+                  self.PTb.append(self.im_BIPArray[int(event.ydata),int(event.xdata),:].tolist())#将点 
                   print(self.PTb)
                   self.teach_KP+=1
                   
@@ -80,8 +81,8 @@ class Bayes_identify:
                   
                   print('地物种类为',self.n,'种')#显示基本信息
                   print("List has been converted into Numpy! Sample input has been finished.")#显示提示信息
-                  self.PT=np.array(self.PT)#转化为numpy数组
-                  self.train(num=self.n)#进行数据计算
+                  print(self.PT)
+                  self.train()#进行数据计算
 
                   del self.PTb#释放每类样本点临时数组
                   del self.teach_KP#释放每类的样本点个数
@@ -99,33 +100,35 @@ class Bayes_identify:
                   
 
       def train(self):
-            for i in range(0,self.n-1):
-                  self.Average.append(np.mean(self.PT[i,:,:],axis=0))#计算各类样本平均值
-                  tempn=self.PT[i,:,:].shape()[0]
-                  covx=[]
-                  for k in range(0,self.each_P[i]-1):
-                        covx.append(self.PT[i,k,:]-self.Averagel[i])
-                  covx=np.array(covx)
-                  covx=np.dot(covx.T,covx)/self.each_P[i]
-                  self.Verience.append(np.matrix(covx).I.reshape(self.im_bands,self.im_bands))
-            
-            
-
-
-            print('train')
+            i=0
+            print(self.PT[i])
+            for i in range(0,self.n):#控制样本循环计算
+                  self.Average.append(np.mean(self.PT[i],axis=0))#计算各类样本平均值
+                  print(self.Average[i])
+                  covx=[]#初始化临时数组用于存储样本值与均值之差
+                  for k in range(0,self.each_P[i]-1):#样本点之间循环
+                        covx.append(self.PT[i][k,:]-self.Average[i])#计算样本点与均值之差准备进行协方差矩阵运算
+                  covx=np.array(covx)#数组化
+                  covx=np.dot(covx.T,covx)/self.each_P[i]#计算每类的方差
+                  self.Variance.append((np.matrix(covx).I.reshape(self.im_bands,self.im_bands))/1000)#计算每类的协方差
+                  print(np.matrix(covx).I.reshape(self.im_bands,self.im_bands))
+                  for i in range(0,self.n):
+                        self.each_P[i]=(self.each_P[i]/self.num_of_POI)
+            print('Basic Caculation Finished')
 
       def seperate(self):
             P_of_P=[]
-            for tx in range(0,self.im_height):
-                  for ty in range(0,self.im_width):
-                        for i in range(0,self.n-1):
-                              print(i)
-                              temparray=np.dot(((self.im_BIPArray[tx,ty,:]-self.Averagel).T).reshape(1,self.im_bands),self.Variancel[i,:,:].reshape(self.im_bands,self.im_bands))
-                              templ=np.dot(temparray,(self.im_BIPArray[tx,ty,:]-self.Averagel).reshape(self.im_bands,1))
-                              P_of_P.append(m.exp(int(-templ[0,0])/2.0)*self.each_P/self.num_of_POI)
-                        P_of_P=np.array(P_of_P)
-            
-            return             
-
+            for i in range(0,self.n):
+                  self.showimg=self.im_BIPArray-self.Average[i]   
+            for tx in range(0,int(self.im_height/4)):
+                  for ty in range(0,int(self.im_width/4)):
+                        for i in range(0,self.n):
+                              temparray=np.dot((self.showimg[tx,ty,:]).T,self.Variance[i])
+                              templ=np.dot(temparray,self.showimg[tx,ty,:])
+                              P_of_P.append(m.exp(-templ[0,0]/2.0)*self.each_P[i])
+                        ptype=P_of_P.index(max(P_of_P))
+                        P_of_P=[]
+                        
+            #plt.imshow()
 
             print('cacu')

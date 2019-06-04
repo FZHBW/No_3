@@ -1,3 +1,4 @@
-import No_3Bayes as NB
+import No_3Bayes as N3B
 
-a=NB.Bayes_identify()
+a=N3B.Bayes_identify()
+a.seperate()
