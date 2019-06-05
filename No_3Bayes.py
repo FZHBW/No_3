@@ -106,29 +106,34 @@ class Bayes_identify:
                   self.Average.append(np.mean(self.PT[i],axis=0))#计算各类样本平均值
                   print(self.Average[i])
                   covx=[]#初始化临时数组用于存储样本值与均值之差
-                  for k in range(0,self.each_P[i]-1):#样本点之间循环
+                  for k in range(0,self.each_P[i]):#样本点之间循环
                         covx.append(self.PT[i][k,:]-self.Average[i])#计算样本点与均值之差准备进行协方差矩阵运算
                   covx=np.array(covx)#数组化
                   covx=np.dot(covx.T,covx)/self.each_P[i]#计算每类的方差
                   self.Variance.append((np.matrix(covx).I.reshape(self.im_bands,self.im_bands))/1000)#计算每类的协方差
                   print(np.matrix(covx).I.reshape(self.im_bands,self.im_bands))
-                  for i in range(0,self.n):
-                        self.each_P[i]=(self.each_P[i]/self.num_of_POI)
+                  self.each_P[i]=(self.each_P[i]/self.num_of_POI)
             print('Basic Caculation Finished')
 
       def seperate(self):
             P_of_P=[]
-            for i in range(0,self.n):
-                  self.showimg=self.im_BIPArray-self.Average[i]   
-            for tx in range(0,int(self.im_height/4)):
-                  for ty in range(0,int(self.im_width/4)):
+            tempp=0.0
+            temptype=0
+            self.showimg=self.im_BIPArray   
+            for tx in range(0,int(self.im_height/5)):
+                  for ty in range(0,int(self.im_width/5)):
                         for i in range(0,self.n):
-                              temparray=np.dot((self.showimg[tx,ty,:]).T,self.Variance[i])
-                              templ=np.dot(temparray,self.showimg[tx,ty,:])
-                              P_of_P.append(m.exp(-templ[0,0]/2.0)*self.each_P[i])
-                        ptype=P_of_P.index(max(P_of_P))
-                        P_of_P=[]
+                              temppoint=self.im_BIPArray[tx,ty,:]-self.Average[i]
+                              temparray=np.dot(temppoint.T,self.Variance[i])
+                              templ=np.dot(temparray,temppoint)
+                              t=m.exp(-templ[0,0]/2.0)#*self.each_P[i]
+                              if tempp<t:
+                                    tempp=t
+                                    temptype=i           
+                        self.showimg[tx,ty,:]=(self.Average[temptype]*2)
+                        print(temptype)
+                        tempp=0.0
                         
-            #plt.imshow()
-
+            plt.imshow(self.showimg[:,:,0:3])
+            plt.show()
             print('cacu')
