@@ -9,13 +9,13 @@ import matplotlib.image as mpimg
 #数学运算库导入
 import numpy as np
 import math as m
+from My_First_numerical import train_net_identify
 
-class Bayes_identify:
-      
+class BP_identify:
       #打开文件
       def __init__(self):
             #基本数据准备
-            filename='/Users/huangyh/Documents/PythonLearning/Model/No_3/Exposed_soil_Houses/Exposed_soilHouses.tif'
+            filename='/Users/huangyh/Documents/PythonLearning/Model/No_3/Varies_of_Houses/多种屋顶.tif'
             self.dataset = gdal.Open(filename)#文件打开
             self.PT=[]#样本存储矩阵
             self.Average=[]#均值矩阵
@@ -60,7 +60,6 @@ class Bayes_identify:
             plt.imshow(self.im_BIPArray[:,:,0:3])#将图像添加到窗口
             plt.show()#图像显示
 
-
       def on_press(self,event):
 
             if event.button==1: #鼠标左键点击选择样本
@@ -71,22 +70,15 @@ class Bayes_identify:
                   
             elif event.button==2: #鼠标中键点击结束选点 
                   self.fig.canvas.mpl_disconnect(self.cid)#终止点击链接
-                  
-                  if self.teach_KP > 0:
-                        self.n+=1#判断是否选了点
-                        self.PT.append(np.array(self.PTb))#将每类的样本点加入矩阵
-                        self.each_P.append(self.teach_KP)#将每类的样本点个数加入数组
-                        self.num_of_POI+=self.teach_KP#总数增加
-
-                  
-                  
                   print('地物种类为',self.n,'种')#显示基本信息
                   print("List has been converted into Numpy! Sample input has been finished.")#显示提示信息
                   print(self.PT)
-                  self.train()#进行数据计算
+                  
 
                   del self.PTb#释放每类样本点临时数组
                   del self.teach_KP#释放每类的样本点个数
+
+                  self.seperatemachine=train_net_identify(self.PT,PTt)
 
             elif event.button==3:#鼠标右键点击选择背景（第二类地物样本）
                   if self.teach_KP > 0:#判断是否选择了点
@@ -99,42 +91,10 @@ class Bayes_identify:
                   else :
                         print('Click left button to choose point')
                   
-
       def train(self):
-            i=0
-            print(self.PT[i])
-            for i in range(0,self.n):#控制样本循环计算
-                  self.Average.append(np.mean(self.PT[i],axis=0))#计算各类样本平均值
-                  print(self.Average[i])
-                  covx=[]#初始化临时数组用于存储样本值与均值之差
-                  for k in range(0,self.each_P[i]):#样本点之间循环
-                        covx.append(self.PT[i][k,:]-self.Average[i])#计算样本点与均值之差准备进行协方差矩阵运算
-                  covx=np.array(covx)#数组化
-                  covx=np.dot(covx.T,covx)/self.each_P[i]#计算每类的方差
-                  self.Variance.append((np.matrix(covx).I.reshape(self.im_bands,self.im_bands))/1000)#计算每类的协方差
-                  print(np.matrix(covx).I.reshape(self.im_bands,self.im_bands))
-                  self.each_P[i]=(self.each_P[i]/self.num_of_POI)
+            
             print('Basic Caculation Finished')
 
       def seperate(self):
-            P_of_P=[]
-            tempp=0.0
-            temptype=0
-            self.showimg=self.im_BIPArray   
-            for tx in range(0,int(self.im_height)):
-                  for ty in range(0,int(self.im_width)):
-                        for i in range(0,self.n):
-                              temppoint=self.im_BIPArray[tx,ty,:]-self.Average[i]
-                              temparray=np.dot(temppoint.T,self.Variance[i])
-                              templ=np.dot(temparray,temppoint)
-                              t=m.exp(-templ[0,0]/2.0)#*self.each_P[i]
-                              if tempp<t:
-                                    tempp=t
-                                    temptype=i           
-                        self.showimg[tx,ty,:]=(self.Average[temptype]*2)
-                        print(temptype)
-                        tempp=0.0
-                        
-            plt.imshow(self.showimg[:,:,0:3])
-            plt.show()
+            
             print('cacu')
