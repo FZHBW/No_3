@@ -42,7 +42,7 @@ class BP_identify:
             self.im_bands = self.dataset.RasterCount #波段数
             self.im_geotrans = self.dataset.GetGeoTransform()#获取仿射矩阵信息
             self.im_proj = self.dataset.GetProjection()#获取投影信息
-            
+            self.Max=0
             #获取数据
             self.im_data = self.dataset.ReadAsArray(0,0,self.im_width,self.im_height)#将读取的数据作为
             operate_data=self.im_data#拷贝一份数据避免原数据被损坏
@@ -58,6 +58,8 @@ class BP_identify:
             self.im_BIPArray=np.append(self.im_BIPArray,\
                   operate_data[3,0:self.im_height,0:self.im_width].reshape(self.im_height*self.im_width,1),axis=1)#合并红绿蓝近红外波段
             
+            self.Max=np.max(self.im_BIPArray)
+
             self.im_BIPArray=self.im_BIPArray/np.max(self.im_BIPArray)#归一化
 
             self.im_BIPArray=self.im_BIPArray.reshape(self.im_height,self.im_width,self.im_bands)#调整图像尺寸
@@ -65,11 +67,9 @@ class BP_identify:
             
             plt.imshow(self.im_BIPArray[:,:,0:3])#将图像添加到窗口
             self.train()
-            plt.show()#图像显示
-            
+            self.seperate()
 
 
-                
       def train(self):
             iters_num = 10000  # 适当设定循环的次数
             train_size = self.x_train.shape[0]
@@ -105,5 +105,21 @@ class BP_identify:
             print('Basic Caculation Finished')
 
       def seperate(self):
-            #self.network.predict
-            print('cacu')
+            showimg=self.im_BIPArray*self.Max
+            color=[0,0,0]
+            for tx in range(0,int(self.im_height)):
+                  for ty in range(0,int(self.im_width)):
+                        #temp=[]
+                        #temp.append(showimg[tx,ty,:])
+                        #temp=np.array(temp)
+                        t=np.argmax(self.network.predict((showimg[tx,ty,:]).reshape(1,4)), axis=1)[0] 
+                        if t==0:
+                              color[1]=1
+                        elif t==1:
+                              color[0]=1
+                        elif t==2:
+                              color[2]=1
+                        showimg[tx,ty,0:3]=color
+                        color=[0,0,0]
+            plt.imshow(showimg[:,:,0:3])
+            plt.show()
