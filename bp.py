@@ -2,20 +2,20 @@
 import os
 import threading
 #图形与界面操作库导入
-import cv2
+import cv2 as cv
 from osgeo import gdal
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 #数学运算库导入
 import numpy as np
 import math as m
-from My_First_numerical import train_net_identify
+import My_First_numerical as MFN
 
 class BP_identify:
       #打开文件
       def __init__(self):
             #基本数据准备
-            filename='/Users/huangyh/Documents/PythonLearning/Model/No_3/Varies_of_Houses/多种屋顶.tif'
+            filename='/Users/huangyh/Documents/PythonLearning/Model/No_3/Exposed_Soil_Water/es_w.tif'
             self.dataset = gdal.Open(filename)#文件打开
             self.PT=[]#样本存储矩阵
             self.Average=[]#均值矩阵
@@ -25,16 +25,23 @@ class BP_identify:
             self.each_P=[]#每类点个数
             self.num_of_POI=0#总样本点个数
             self.showimg=np.array([])
+
+            self.network = MFN.seperate_numerical()
+            self.x_train=np.loadtxt('/Users/huangyh/Documents/PythonLearning/Model/No_3/x_data.txt')
+            self.t_train=np.loadtxt('/Users/huangyh/Documents/PythonLearning/Model/No_3/t_data.txt')
+
             #临时变量准备
             self.PTb=[]#每类样本点临时数组
+            self.PTt=[]
             self.teach_KP=0#每类的样本点个数
-
+            self.type_color=[np.array([0,0,255]),np.array([0,255,255]),np.array([255,255,255]),\
+                  np.array([255,0,255]),np.array([0,0,0])]
             #获取文件基本信息
             self.im_width = self.dataset.RasterXSize #栅格矩阵的列数
             self.im_height = self.dataset.RasterYSize #栅格矩阵的行数
             self.im_bands = self.dataset.RasterCount #波段数
             self.im_geotrans = self.dataset.GetGeoTransform()#获取仿射矩阵信息
-            self.im_proj = self.dataset.GetProjection()#获取投影信息 
+            self.im_proj = self.dataset.GetProjection()#获取投影信息
             
             #获取数据
             self.im_data = self.dataset.ReadAsArray(0,0,self.im_width,self.im_height)#将读取的数据作为
@@ -55,46 +62,48 @@ class BP_identify:
 
             self.im_BIPArray=self.im_BIPArray.reshape(self.im_height,self.im_width,self.im_bands)#调整图像尺寸
 
-            self.cid=self.fig.canvas.mpl_connect('button_press_event', self.on_press)
-
-            plt.imshow(self.im_BIPArray[:,:,0:3])#将图像添加到窗口
-            plt.show()#图像显示
-
-      def on_press(self,event):
-
-            if event.button==1: #鼠标左键点击选择样本
-                  self.PTb.append(self.im_BIPArray[int(event.ydata),int(event.xdata),:].tolist())#将点 
-                  print(self.PTb)
-                  self.teach_KP+=1
-                  
-                  
-            elif event.button==2: #鼠标中键点击结束选点 
-                  self.fig.canvas.mpl_disconnect(self.cid)#终止点击链接
-                  print('地物种类为',self.n,'种')#显示基本信息
-                  print("List has been converted into Numpy! Sample input has been finished.")#显示提示信息
-                  print(self.PT)
-                  
-
-                  del self.PTb#释放每类样本点临时数组
-                  del self.teach_KP#释放每类的样本点个数
-
-                  self.seperatemachine=train_net_identify(self.PT,PTt)
-
-            elif event.button==3:#鼠标右键点击选择背景（第二类地物样本）
-                  if self.teach_KP > 0:#判断是否选择了点
-                        self.PT.append(np.array(self.PTb))#将每类的样本点加入矩阵
-                        self.each_P.append(self.teach_KP)#将每类个数加入函数中
-                        self.num_of_POI+=self.teach_KP#样本点总数加入
-                        self.teach_KP=0#计数器归零
-                        self.n+=1#类别数量增加
-                        self.PTb=[]#临时样本数据归零
-                  else :
-                        print('Click left button to choose point')
-                  
-      def train(self):
             
+            plt.imshow(self.im_BIPArray[:,:,0:3])#将图像添加到窗口
+            self.train()
+            plt.show()#图像显示
+            
+
+
+                
+      def train(self):
+            iters_num = 10000  # 适当设定循环的次数
+            train_size = self.x_train.shape[0]
+            batch_size = 300
+            learning_rate = 0.001
+
+            train_loss_list = []
+            train_acc_list = []
+            test_acc_list = []
+            train_acc=0
+            iter_per_epoch = max(train_size / batch_size, 1)
+
+            for i in range(iters_num):
+                  batch_mask = np.random.choice(train_size, batch_size)
+                  x_batch = self.x_train[batch_mask]
+                  t_batch = self.t_train[batch_mask]
+    
+            # 计算梯度
+                  grad = self.network.gradient(x_batch, t_batch)
+    
+            # 更新参数
+                  for key in ('W1', 'b1', 'W2', 'b2'):
+                        self.network.params[key] -= learning_rate * grad[key]
+    
+                  loss = self.network.loss(x_batch, t_batch)
+    
+                  if i % iter_per_epoch == 0:
+                        train_acc = self.network.accuracy(self.x_train, self.t_train)
+                        print("train acc=" + str(train_acc))
+                  
+                  if train_acc >0.95:
+                        break
             print('Basic Caculation Finished')
 
       def seperate(self):
-            
+            #self.network.predict
             print('cacu')

@@ -15,7 +15,7 @@ class Bayes_identify:
       #打开文件
       def __init__(self):
             #基本数据准备
-            filename='/Users/huangyh/Documents/PythonLearning/Model/No_3/Exposed_soil_Houses/Exposed_soilHouses.tif'
+            filename='/Users/huangyh/Documents/PythonLearning/Model/No_3/Exposed_Soil_Water/es_w.tif'
             self.dataset = gdal.Open(filename)#文件打开
             self.PT=[]#样本存储矩阵
             self.Average=[]#均值矩阵
@@ -25,6 +25,7 @@ class Bayes_identify:
             self.each_P=[]#每类点个数
             self.num_of_POI=0#总样本点个数
             self.showimg=np.array([])
+            self.Max=0
             #临时变量准备
             self.PTb=[]#每类样本点临时数组
             self.teach_KP=0#每类的样本点个数
@@ -50,8 +51,8 @@ class Bayes_identify:
 
             self.im_BIPArray=np.append(self.im_BIPArray,\
                   operate_data[3,0:self.im_height,0:self.im_width].reshape(self.im_height*self.im_width,1),axis=1)#合并红绿蓝近红外波段
-            
-            self.im_BIPArray=self.im_BIPArray/np.max(self.im_BIPArray)#归一化
+            self.Max=np.max(self.im_BIPArray)
+            self.im_BIPArray=self.im_BIPArray/self.Max#归一化
 
             self.im_BIPArray=self.im_BIPArray.reshape(self.im_height,self.im_width,self.im_bands)#调整图像尺寸
 
@@ -120,10 +121,14 @@ class Bayes_identify:
             P_of_P=[]
             tempp=0.0
             temptype=0
+            t_data=[]
+            x_data=[]
+            tempt=[0,0,0]
             self.showimg=self.im_BIPArray   
-            for tx in range(0,int(self.im_height)):
-                  for ty in range(0,int(self.im_width)):
-                        for i in range(0,self.n):
+            for tx in range(0,int(self.im_height/2)):
+                  for ty in range(int(self.im_width/2),int(self.im_width)):
+                        x_data.append(self.showimg[tx,ty,:]*self.Max)
+                        for i in range(0,3):
                               temppoint=self.im_BIPArray[tx,ty,:]-self.Average[i]
                               temparray=np.dot(temppoint.T,self.Variance[i])
                               templ=np.dot(temparray,temppoint)
@@ -131,10 +136,14 @@ class Bayes_identify:
                               if tempp<t:
                                     tempp=t
                                     temptype=i           
-                        self.showimg[tx,ty,:]=(self.Average[temptype]*2)
-                        print(temptype)
+                        self.showimg[tx,ty,:]=(self.Average[temptype]*1.5)
+                        tempt[temptype]=1
+                        tempt=np.array(tempt)
+                        t_data.append(tempt)
+                        tempt=[0,0,0]
                         tempp=0.0
-                        
+            np.savetxt('/Users/huangyh/Documents/PythonLearning/Model/No_3/x_data.txt', x_data,fmt ='%.0f')
+            np.savetxt('/Users/huangyh/Documents/PythonLearning/Model/No_3/t_data.txt', t_data,fmt ='%.0f')
             plt.imshow(self.showimg[:,:,0:3])
             plt.show()
             print('cacu')
