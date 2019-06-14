@@ -71,7 +71,7 @@ class BP_identify:
 
 
       def train(self):
-            iters_num = 10000  # 适当设定循环的次数
+            iters_num = 10000000  # 适当设定循环的次数
             train_size = self.x_train.shape[0]
             batch_size = 300
             learning_rate = 0.001
@@ -100,7 +100,7 @@ class BP_identify:
                         train_acc = self.network.accuracy(self.x_train, self.t_train)
                         print("train acc=" + str(train_acc))
                   
-                  if train_acc >0.95:
+                  if train_acc >0.97:
                         break
             print('Basic Caculation Finished')
 

@@ -137,13 +137,8 @@ class Bayes_identify:
                                     tempp=t
                                     temptype=i           
                         self.showimg[tx,ty,:]=(self.Average[temptype]*1.5)
-                        tempt[temptype]=1
-                        tempt=np.array(tempt)
-                        t_data.append(tempt)
-                        tempt=[0,0,0]
                         tempp=0.0
-            np.savetxt('/Users/huangyh/Documents/PythonLearning/Model/No_3/x_data.txt', x_data,fmt ='%.0f')
-            np.savetxt('/Users/huangyh/Documents/PythonLearning/Model/No_3/t_data.txt', t_data,fmt ='%.0f')
+            
             plt.imshow(self.showimg[:,:,0:3])
             plt.show()
             print('cacu')
