@@ -10,14 +10,20 @@ import matplotlib.image as mpimg
 import numpy as np
 import math as m
 
+
+
+
 class Bayes_identify:
       
       #打开文件
       def __init__(self):
             #基本数据准备
-            filename=''
-            filename=input()
+            filename='/Users/huangyh/Documents/PythonLearning/Model/No_3/Exposed_soil_Houses/Exposed_soilHouses.tif'
             self.dataset = gdal.Open(filename)#文件打开
+            
+            print(self.dataset.GetDriver().ShortName)
+            print(self.dataset.GetDescription())
+            #print(self.dataset[0,0,0].DataType())
             self.PT=[]#样本存储矩阵
             self.Average=[]#均值矩阵
             self.Variance=[]#协方差矩阵
@@ -41,7 +47,7 @@ class Bayes_identify:
             #获取数据
             self.im_data = self.dataset.ReadAsArray(0,0,self.im_width,self.im_height)#将读取的数据作为
             operate_data=self.im_data#拷贝一份数据避免原数据被损坏
-           
+            self.dataset_type=type(self.im_data[0,0,0])
             #从数据中提取波段
             self.im_BIPArray=np.append(\
                   operate_data[2,0:self.im_height,0:self.im_width].reshape(self.im_height*self.im_width,1),\
@@ -53,7 +59,8 @@ class Bayes_identify:
             self.im_BIPArray=np.append(self.im_BIPArray,\
                   operate_data[3,0:self.im_height,0:self.im_width].reshape(self.im_height*self.im_width,1),axis=1)#合并红绿蓝近红外波段
             self.Max=np.max(self.im_BIPArray)
-            self.im_BIPArray=self.im_BIPArray/self.Max#归一化
+
+            self.im_BIPArray=self.im_BIPArray/self.Max
 
             self.im_BIPArray=self.im_BIPArray.reshape(self.im_height,self.im_width,self.im_bands)#调整图像尺寸
 
@@ -67,6 +74,7 @@ class Bayes_identify:
 
             if event.button==1: #鼠标左键点击选择样本
                   self.PTb.append(self.im_BIPArray[int(event.ydata),int(event.xdata),:].tolist())#将点 
+                  print(self.PTb)
                   self.teach_KP+=1
                   
                   
@@ -103,6 +111,7 @@ class Bayes_identify:
 
       def train(self):
             i=0
+            print(self.PT[i])
             for i in range(0,self.n):#控制样本循环计算
                   self.Average.append(np.mean(self.PT[i],axis=0))#计算各类样本平均值
                   covx=[]#初始化临时数组用于存储样本值与均值之差
@@ -110,30 +119,32 @@ class Bayes_identify:
                         covx.append(self.PT[i][k,:]-self.Average[i])#计算样本点与均值之差准备进行协方差矩阵运算
                   covx=np.array(covx)#数组化
                   covx=np.dot(covx.T,covx)/self.each_P[i]#计算每类的方差
-                  self.Variance.append((np.matrix(covx).I.reshape(self.im_bands,self.im_bands))/1000)#计算每类的协方差
-                  print(np.matrix(covx).I.reshape(self.im_bands,self.im_bands))
+                  self.Variance.append(np.array(((np.matrix(covx).I).reshape(self.im_bands,self.im_bands))))#计算每类的协方差
                   self.each_P[i]=(self.each_P[i]/self.num_of_POI)
+            for i in range(0,self.n):
+                print(self.Variance[i])
             print('Basic Caculation Finished')
 
       def seperate(self):
+           
             P_of_P=[]
-            tempp=0.0
-            temptype=0
+            tempp=np.zeros((self.im_height,self.im_width))
+            temptype=np.zeros((self.im_height,self.im_width))
             tempt=[0,0,0]
-            self.showimg=self.im_BIPArray   
+            self.showimg=self.im_BIPArray
             
-            for tx in range(0,int(self.im_height)):
-                  for ty in range(0,int(self.im_width)):
-                        for i in range(0,self.n):
-                              temppoint=self.im_BIPArray[tx,ty,:]-self.Average[i]
-                              temparray=np.dot(temppoint.T,self.Variance[i])
-                              templ=np.dot(temparray,temppoint)
-                              t=m.exp(-templ[0,0]/2.0)
-                              if tempp<t:
-                                    tempp=t
-                                    temptype=i           
-                        self.showimg[tx,ty,:]=(self.Average[temptype]*1.5)
-                        tempp=0.0
+            for i in range(0,self.n):
+                temppoint=(self.im_BIPArray-self.Average[i])
+                temparray=np.dot(temppoint,self.Variance[i])
+                for tx in range(0,int(self.im_height)):
+                    for ty in range(0,int(self.im_width)):
+                        templ=np.dot(temppoint[tx,ty].T,temparray[tx,ty])
+                        t=m.exp(-templ/2.0)
+                        if tempp[tx,ty]<t:
+                              tempp[tx,ty]=t          
+                              self.showimg[tx,ty,:]=(self.Average[i]*1.5)
+
             
             plt.imshow(self.showimg[:,:,0:3])
             plt.show()
+            print('cacu')

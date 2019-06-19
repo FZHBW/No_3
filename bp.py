@@ -15,7 +15,7 @@ class BP_identify:
       #打开文件
       def __init__(self):
             #基本数据准备
-            filename='/Users/huangyh/Documents/PythonLearning/Model/No_3/Exposed_Soil_Water/es_w.tif'
+            filename='/Users/huangyh/Documents/PythonLearning/Model/No_3/Varies_of_Houses/多种屋顶.tif'
             self.dataset = gdal.Open(filename)#文件打开
             self.PT=[]#样本存储矩阵
             self.Average=[]#均值矩阵
@@ -71,7 +71,7 @@ class BP_identify:
 
 
       def train(self):
-            iters_num = 10000000  # 适当设定循环的次数
+            iters_num = 100000  # 适当设定循环的次数
             train_size = self.x_train.shape[0]
             batch_size = 300
             learning_rate = 0.001
@@ -100,7 +100,7 @@ class BP_identify:
                         train_acc = self.network.accuracy(self.x_train, self.t_train)
                         print("train acc=" + str(train_acc))
                   
-                  if train_acc >0.97:
+                  if train_acc >0.95:
                         break
             print('Basic Caculation Finished')
 
@@ -109,9 +109,6 @@ class BP_identify:
             color=[0,0,0]
             for tx in range(0,int(self.im_height)):
                   for ty in range(0,int(self.im_width)):
-                        #temp=[]
-                        #temp.append(showimg[tx,ty,:])
-                        #temp=np.array(temp)
                         t=np.argmax(self.network.predict((showimg[tx,ty,:]).reshape(1,4)), axis=1)[0] 
                         if t==0:
                               color[1]=1

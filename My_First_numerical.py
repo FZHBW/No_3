@@ -57,10 +57,10 @@ class Affine:
     def forward(self, x):
         # 对应张量
         self.original_x_shape = x.shape
-        x = x.reshape(x.shape[0], -1)
+        x = x.reshape(x.shape[0], -1)#将x形式自动设置为n*...
         self.x = x
 
-        out = np.dot(self.x, self.W) + self.b
+        out = np.dot(self.x, self.W) + self.b#计算前向传播结果
 
         return out
 
